@@ -1,0 +1,23 @@
+{% extends 'base.html' %}
+{% block main %}
+<div class="content-container">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+         {% if messages %}
+        <ul>
+             {% for category, message in messages %}
+                <li{% if catergory == 'error' %} class="error"{% endif %}><p>{{ message }}</p></li>
+             {% endfor %}
+        </ul><br>
+        {% endif %}
+    {% endwith %}
+        <form action="" method="POST" novalidate>
+            {{ form.hidden_tag() }}
+            <p> User ID: <br> {{ form.id }}</p>
+            <p> Name: <br> {{ form.name }}</p>
+            <p> Password: <br> {{ form.password }}</p>
+            <p> Confirm Password: <br> {{ form.password_confirm }}</p>
+            <input type="submit" class="btn" value="Submit">
+            <p></p>
+        </form>
+    </div>
+{% endblock %}

@@ -1,0 +1,231 @@
+{% extends 'base.html' %}
+{% block main %}
+
+<body>
+    <div class="container-right" style="width:100%">
+        <button type="button" class="btn" onclick=simple_action("{{ url_for('stats') }}")>Statisitcs</button>
+        <button type="button" class="btn" onclick=simple_action("{{ url_for('users_signout') }}")>Sign Out</button>
+    </div>
+
+    <div class="content-container"> 
+        <h1 style="color: white;"> Hello {{ userName }}! </h1>
+        <h1 style="color: white;"> You have six tries to guess the five letter word</h1>
+        <p> Type with the keyboard to make a guess: </p>
+    </div>
+    <div id="board"></div>
+
+    
+</body>  
+<script type="text/javascript">
+let matchCount;
+let guessCount = 0;
+let win = false;
+let loss = false;
+
+function sendWord() {
+    
+    const word = getCurrentWord();
+
+    const jsonData = [word];
+
+    fetch("/processGuess", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"  
+        },
+        body: JSON.stringify(jsonData)
+    })
+    .then(response => response.json())
+    .then(serverResponse => {
+        
+        //A list is returned. First index is the list generate colors uses, the other is the answer.
+        generateColors(serverResponse[0], serverResponse[1]);
+    })
+    .catch(error => {
+        console.error("Error:", error);
+    });
+}
+
+
+function generateColors(serverResponse, answer) {
+
+    const row = state.currentRow;
+    const animation_duration = 500; //ms
+    let matchCount = 0;
+
+    
+    // Color each box with a delay
+    for (let i = 0; i < 5; i++) {
+        const box = document.getElementById(`box${row}${i}`);
+        setTimeout(() => {
+            if (serverResponse[i] === 'green') {
+                box.classList.add('green');
+                matchCount += 1;
+            } else if (serverResponse[i] === 'yellow') {
+                box.classList.add('yellow');
+            } else if (serverResponse[i] === 'grey') {
+                box.classList.add('grey');
+            }
+        }, ((i + 1) * animation_duration / 2));
+
+        box.classList.add('animated');
+        box.style.animationDelay = `${(i * animation_duration) / 2}ms`;
+        
+    }
+    guessCount +=1;
+    
+
+    setTimeout(() => {
+        checkGameOutcome(matchCount, guessCount, answer);
+        state.currentRow++;
+        state.currentCol = 0;
+    }, 3 * animation_duration);
+}
+
+function checkGameOutcome(matchCount, guessCount, answer) {
+    const isWinner = (matchCount === 5);
+    const isGameOver = state.currentRow == 5;
+    let isOver = false;
+
+    if (isWinner) {
+        
+        //Send Guess info for statistics route
+        let xhr = new XMLHttpRequest();
+        xhr.open("POST", "/processStats", true);
+        xhr.setRequestHeader("Content-Type", "application/json");
+        var data = JSON.stringify({ "guessNumber": guessCount});
+        xhr.send(data);
+        guessCount = 0;
+        isOver = true;
+        win = true;
+        alert("Congratulations!");
+    } else if (isGameOver) {
+        isOver = true;
+        loss = true;
+        alert(`Better luck next time! The word was ${answer}`); 
+    }
+
+    if(isOver) {
+    
+    let xhr2 = new XMLHttpRequest();
+        xhr2.open("POST", "/wordle", true);
+        xhr2.setRequestHeader("Content-Type", "application/json");
+        var data = JSON.stringify({"gameEnd": isOver,
+                                    "win" : win, 
+                                    "loss" : loss});
+        xhr2.send(data);
+        window.location.reload();
+    }
+}
+
+</script>
+
+<!-- Function definitions for above script -->
+<script type="text/javascript">
+
+function simple_action(target) {
+            window.location = target
+}
+
+const guessDictionary = {{ guess_dict_json | safe }};
+
+const state = {
+    grid: Array(6)
+        .fill()
+        .map(() => Array(5).fill('')),
+    currentRow: 0,
+    currentCol: 0,
+
+};
+
+function updateGrid() {
+    for(let i = 0; i < state.grid.length; i++) {
+        for(let j = 0; j < state.grid[i].length; j++) {
+            const box = document.getElementById(`box${i}${j}`)
+            box.textContent = state.grid[i][j];
+        }
+    }
+}
+
+function createBox(container, row, col, letter = '') {
+    const box = document.createElement('div');
+    box.className = 'box';
+    box.id = `box${row}${col}`;
+    box.textContent = letter;
+
+    container.appendChild(box);
+    return box;
+}
+
+function createGrid(container) {
+    const grid = document.createElement('div');
+    grid.className = 'grid';
+
+    for (let i = 0; i < 6; i++) {
+        for (let j = 0; j < 5; j++) {
+            createBox(grid, i, j);
+        }
+    }
+
+    container.appendChild(grid);
+}
+
+function getCurrentWord() {
+    return state.grid[state.currentRow].reduce((prev, curr) => prev + curr);
+}
+
+function isWordValid(word) {
+    return Object.values(guessDictionary).includes(word);
+}
+
+function isLetter(key) {
+    return key.length === 1 && key.match(/[a-z]/i);
+}
+
+function addLetter(letter) {
+    if (state.currentCol === 5) return;
+    state.grid[state.currentRow][state.currentCol] = letter;
+    state.currentCol++;
+}
+
+function removeLetter() {
+    if(state.currentCol === 0) return;
+    state.grid[state.currentRow][state.currentCol -1] = '';
+    state.currentCol--;
+}
+
+function registerKeyboardEvents() {
+    document.body.onkeydown = (e) => {
+        const key = e.key;
+        if(key === 'Enter') {
+            if (state.currentCol === 5) {
+                const word = getCurrentWord();
+                if (isWordValid(word)) {
+                    sendWord();
+                } else {
+                    alert('Entry not in guess list');
+                }
+            }
+        }
+        if(key == 'Backspace') {
+            removeLetter();
+        }
+        if (isLetter(key)) {
+            addLetter(key);
+        }
+
+        updateGrid();
+    };
+}
+
+function beginGame() {
+    const board = document.getElementById('board');
+    createGrid(board);
+    registerKeyboardEvents();
+}
+
+    beginGame(); 
+</script>
+
+
+{% endblock %}

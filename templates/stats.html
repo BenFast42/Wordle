@@ -1,0 +1,108 @@
+{% extends 'base.html' %}
+{% block main %}
+
+<body>
+
+    <div class="container-right">
+        <button type="button" class="btn" onclick=simple_action("{{ url_for('wordle') }}")>Back</button>
+        <button type="button" class="btn" onclick=simple_action("{{ url_for('users_signout') }}")>Sign Out</button>
+    </div>
+   
+
+    <div class="win-rate"> 
+        
+        <p>Total games played: {{ winrate['total'] }}</p>
+
+        <!-- Jinja If statement to avoid division by zero, if winrate == zero, set winrate to N/A -->
+        {% if winrate['total'] != 0 %}
+            <p>Win rate: {{ '%0.2f%%' | format((winrate['wins'] / winrate['total']) * 100) }}</p>
+
+        {% else %}
+            <p> Win rate: N/A </p>
+
+        {% endif %}
+        
+    </div>
+
+    <div class="stats-container">
+
+        <div class="stats-labels">
+            <p> Guesses in one try: </p> 
+            <p> Guesses in two tries: </p>
+            <p> Guesses in three tries:  </p>
+            <p> Guesses in four tries: </p>
+            <p> Guesses in five tries:  </p>
+            <p> Guesses in six tries: </p>
+
+        </div>
+
+        
+        <!-- If winrate not 0, then dynamically alter the stats-bar width to display the guess distribution in a graph -->
+        {% if winrate['wins'] != 0 %}
+            <div class="stats-box">
+                <div class="stats-bar" style="width: {{ (guessesDict['one']/winrate['wins'])*100 }}%;">
+                    <p> {{ guessesDict['one'] }} </p>
+                </div>
+
+                <div class="stats-bar" style="width: {{ (guessesDict['two']/winrate['wins'])*100 }}%;"">
+                    <p> {{ guessesDict['two'] }} </p>
+                </div>
+
+                <div class="stats-bar" style="width: {{ (guessesDict['three']/winrate['wins'])*100 }}%;">
+                    <p> {{ guessesDict['three'] }} </p>
+                </div>
+
+                <div class="stats-bar" style="width: {{ (guessesDict['four']/winrate['wins'])*100 }}%;">
+                    <p> {{ guessesDict['four'] }} </p>
+                </div>
+
+                <div class="stats-bar" style="width: {{ (guessesDict['five']/winrate['wins'])*100 }}%;">
+                    <p> {{ guessesDict['five'] }} </p>
+                </div>
+
+                <div class="stats-bar" style="width: {{ (guessesDict['six']/winrate['wins'])*100 }}%;">
+                    <p> {{ guessesDict['six'] }} </p>
+                </div>
+
+            </div>
+
+    <!-- If winrate is zero, then set stats-bar with to zero -->
+        {% else %}
+            <div class="stats-box">
+                <div class="stats-bar" style="width: 0%;">
+                    <p> {{ guessesDict['one'] }} </p>
+                </div>
+
+                <div class="stats-bar" style="width: 0%;">
+                    <p> {{ guessesDict['two'] }} </p>
+                </div>
+
+                <div class="stats-bar" style="width: 0%;">
+                    <p> {{ guessesDict['three'] }} </p>
+                </div>
+
+                <div class="stats-bar" style="width: 0%;">
+                    <p> {{ guessesDict['four'] }} </p>
+                </div>
+
+                <div class="stats-bar" style="width: 0%;">
+                    <p> {{ guessesDict['five'] }} </p>
+                </div>
+
+                <div class="stats-bar" style="width: 0%;">
+                    <p> {{ guessesDict['six'] }} </p>
+                </div>
+            </div>
+
+        {% endif %}
+    </div>
+</body>
+
+<script type="text/javascript">
+    function simple_action(target) {
+        window.location = target
+    }
+</script>
+
+
+{% endblock %}
